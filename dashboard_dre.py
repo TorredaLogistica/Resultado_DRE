@@ -24,13 +24,21 @@ def check_password():
             del st.session_state.pwd
 
     if "auth" not in st.session_state:
-        st.text_input("Senha de acesso", type="password",
-                      key="pwd", on_change=authenticate)
+        st.text_input(
+            "Senha de acesso",
+            type="password",
+            key="pwd",
+            on_change=authenticate
+        )
         st.stop()
 
     if not st.session_state.auth:
-        st.text_input("Senha de acesso", type="password",
-                      key="pwd", on_change=authenticate)
+        st.text_input(
+            "Senha de acesso",
+            type="password",
+            key="pwd",
+            on_change=authenticate
+        )
         st.error("Senha incorreta")
         st.stop()
 
@@ -56,7 +64,7 @@ MAPA_MESES = {
 ORDEM_MESES = list(MAPA_MESES.values())
 
 # ======================================================
-# FORMATADORES (INALTERADOS)
+# FORMATADORES
 # ======================================================
 def fmt_mi(v):
     if v is None or pd.isna(v) or v == 0:
@@ -69,20 +77,17 @@ def fmt_pct(v):
     return f"{v:.2f}%".replace(".", ",")
 
 # ======================================================
-# LEITURA DO EXCEL (AJUSTE ÚNICO AQUI)
+# LEITURA DO EXCEL (GITHUB / CLOUD)
 # ======================================================
 @st.cache_data
 def load_data():
-    # Caminho absoluto do arquivo no repositório GitHub
     caminho = os.path.join(os.path.dirname(__file__), ARQUIVO_XLSX)
 
     if not os.path.exists(caminho):
         st.error(
             "❌ Arquivo 'Resultado DRE.xlsx' não encontrado.\n\n"
-            "Verifique se:\n"
-            "- O arquivo está na raiz do repositório GitHub\n"
-            "- O nome está exatamente: Resultado DRE.xlsx\n"
-            "- Inclui espaço e maiúsculas"
+            "Verifique se o arquivo está na raiz do repositório "
+            "e se o nome está exatamente igual."
         )
         st.stop()
 
@@ -109,14 +114,12 @@ def load_data():
 df = load_data()
 
 # ======================================================
-# SIDEBAR (INALTERADO)
+# SIDEBAR
 # ======================================================
 anos = sorted(df["ano"].unique())
 ano_padrao = max(anos)
 
-tipos_conta = sorted(
-    df["tipo_conta"].dropna().astype(str).unique()
-)
+tipos_conta = sorted(df["tipo_conta"].dropna().astype(str).unique())
 
 with st.sidebar:
     visao = st.radio("Visão", ["Consolidado", "Filial", "Comparativo"])
@@ -141,7 +144,7 @@ with st.sidebar:
         )
 
 # ======================================================
-# BASE FILTRADA (INALTERADA)
+# BASE FILTRADA
 # ======================================================
 base = df[df["ano"] == ano].copy()
 
@@ -153,7 +156,7 @@ if filial:
     base = base[base["cidade"] == filial]
 
 # ======================================================
-# VISÃO COMPARATIVO (INALTERADA)
+# VISÃO COMPARATIVO (CORRIGIDA)
 # ======================================================
 if visao == "Comparativo":
 
@@ -173,6 +176,7 @@ if visao == "Comparativo":
         .sort_values("mes_num")
     )
 
+    # GRÁFICO
     fig = px.line(
         comp,
         x="mes_nome",
@@ -184,17 +188,19 @@ if visao == "Comparativo":
     fig.update_layout(xaxis_title="Mês", yaxis_title="R$")
     st.plotly_chart(fig, use_container_width=True)
 
+    # TABELA
     tabela = (
         comp.pivot(index="ano", columns="mes_nome", values="valor")
         .reindex(columns=ORDEM_MESES)
     )
-    
-if len(anos_comp) == 2:
-    a1, a2 = sorted(anos_comp)
 
-    if a1 in tabela.index and a2 in tabela.index:
-        tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
+    # VARIAÇÃO % (SÓ SE OS DOIS ANOS EXISTIREM)
+    if len(anos_comp) == 2:
+        a1, a2 = sorted(anos_comp)
+        if a1 in tabela.index and a2 in tabela.index:
+            tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
 
+    # FORMATAÇÃO FINAL
     tabela_fmt = tabela.copy()
     for idx in tabela_fmt.index:
         if idx == "Variação %":
@@ -205,7 +211,7 @@ if len(anos_comp) == 2:
     st.dataframe(tabela_fmt, use_container_width=True)
 
 # ======================================================
-# CONSOLIDADO / FILIAL (INALTERADO)
+# CONSOLIDADO / FILIAL
 # ======================================================
 else:
 
