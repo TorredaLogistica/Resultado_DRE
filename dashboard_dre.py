@@ -188,9 +188,11 @@ if visao == "Comparativo":
         comp.pivot(index="ano", columns="mes_nome", values="valor")
         .reindex(columns=ORDEM_MESES)
     )
+    
+if len(anos_comp) == 2:
+    a1, a2 = sorted(anos_comp)
 
-    if len(anos_comp) == 2:
-        a1, a2 = sorted(anos_comp)
+    if a1 in tabela.index and a2 in tabela.index:
         tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
 
     tabela_fmt = tabela.copy()
