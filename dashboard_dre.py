@@ -24,37 +24,53 @@ def check_password():
             del st.session_state.pwd
 
     if "auth" not in st.session_state:
-        st.text_input(
-            "Senha de acesso",
-            type="password",
-            key="pwd",
-            on_change=authenticate
-        )
+        st.text_input("Senha de acesso", type="password",
+                      key="pwd", on_change=authenticate)
         st.stop()
 
     if not st.session_state.auth:
-        st.text_input(
-            "Senha de acesso",
-            type="password",
-            key="pwd",
-            on_change=authenticate
-        )
+        st.text_input("Senha de acesso", type="password",
+                      key="pwd", on_change=authenticate)
         st.error("Senha incorreta")
         st.stop()
 
 check_password()
 
 # ======================================================
-# CABEÇALHO (HORÁRIO BRASÍLIA)
+# CABEÇALHO
 # ======================================================
 agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
 st.title("📊 Dashboard DRE")
 st.caption(f"Atualizado em {agora.strftime('%d/%m/%Y %H:%M')}")
 
 # ======================================================
-# CONSTANTES
+# CSS DOS CARDS
 # ======================================================
-ARQUIVO_XLSX = "Resultado DRE.xlsx"
+st.markdown("""
+<style>
+.card {background:#fff;border:1px solid #e5e7eb;border-radius:22px;
+padding:20px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.card-title {font-size:13px;color:#6b7280;text-transform:uppercase;margin-bottom:6px;}
+.card-value {font-size:26px;font-weight:700;}
+.blue {color:#1F77B4;}
+.green {color:#2CA02C;}
+.orange {color:#F05A28;}
+</style>
+""", unsafe_allow_html=True)
+
+def card(t, v, c):
+    return f"<div class='card'><div class='card-title'>{t}</div><div class='card-value {c}'>{v}</div></div>"
+
+def fmt_mi(v):
+    return "" if pd.isna(v) or v == 0 else f"R$ {v/1e6:,.2f} Mi".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def fmt_pct(v):
+    return "" if pd.isna(v) else f"{v:.2f}%".replace(".", ",")
+
+# ======================================================
+# DADOS
+# ======================================================
+ARQUIVO = "Resultado DRE.xlsx"
 
 MAPA_MESES = {
     1:"janeiro",2:"fevereiro",3:"março",4:"abril",
@@ -63,178 +79,142 @@ MAPA_MESES = {
 }
 ORDEM_MESES = list(MAPA_MESES.values())
 
-# ======================================================
-# FORMATADORES
-# ======================================================
-def fmt_mi(v):
-    if v is None or pd.isna(v) or v == 0:
-        return ""
-    return f"R$ {v/1e6:,.2f} Mi".replace(",", "X").replace(".", ",").replace("X", ".")
-
-def fmt_pct(v):
-    if v is None or pd.isna(v):
-        return ""
-    return f"{v:.2f}%".replace(".", ",")
-
-# ======================================================
-# LEITURA DO EXCEL (GITHUB / CLOUD)
-# ======================================================
 @st.cache_data
-def load_data():
-    caminho = os.path.join(os.path.dirname(__file__), ARQUIVO_XLSX)
-
+def load():
+    caminho = os.path.join(os.path.dirname(__file__), ARQUIVO)
     if not os.path.exists(caminho):
-        st.error(
-            "❌ Arquivo 'Resultado DRE.xlsx' não encontrado.\n\n"
-            "Verifique se o arquivo está na raiz do repositório "
-            "e se o nome está exatamente igual."
-        )
+        st.error("Arquivo Resultado DRE.xlsx não encontrado no repositório.")
         st.stop()
 
-    df = pd.read_excel(caminho, header=None, engine="openpyxl")
-    df.columns = [
-        "cidade","empresa","categoria",
-        "tipo_conta","tipo","data","valor"
-    ]
-
-    df["tipo"] = df["tipo"].astype(str).str.upper().str.strip()
-    df["tipo_conta"] = df["tipo_conta"].astype(str).str.strip()
-    df["empresa"] = df["empresa"].astype(str).str.strip()
-
+    df = pd.read_excel(caminho, header=None)
+    df.columns = ["cidade","empresa","categoria","tipo_conta","tipo","data","valor"]
+    df["tipo"] = df["tipo"].str.upper().str.strip()
+    df["tipo_conta"] = df["tipo_conta"].str.strip()
+    df["empresa"] = df["empresa"].str.strip()
     df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
     df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
     df = df.dropna(subset=["data","valor"])
-
     df["ano"] = df["data"].dt.year
     df["mes_num"] = df["data"].dt.month
     df["mes_nome"] = df["mes_num"].map(MAPA_MESES)
-
     return df
 
-df = load_data()
+df = load()
 
 # ======================================================
 # SIDEBAR
 # ======================================================
-anos = sorted(df["ano"].unique())
+anos = sorted(df.ano.unique())
 ano_padrao = max(anos)
 
-tipos_conta = sorted(df["tipo_conta"].dropna().astype(str).unique())
+tipos = sorted(df.tipo_conta.dropna().unique())
 
 with st.sidebar:
-    visao = st.radio("Visão", ["Consolidado", "Filial", "Comparativo"])
-    ano = st.selectbox("Ano", anos, index=anos.index(ano_padrao))
+    visao = st.radio("Visão", ["Consolidado","Filial","Comparativo"])
+
+    # 🔹 Filtro de ano NÃO aparece no Comparativo
+    if visao != "Comparativo":
+        ano = st.selectbox("Ano", anos, index=anos.index(ano_padrao))
+    else:
+        ano = None
 
     tipo_conta = st.multiselect(
         "Tipo da Conta",
-        tipos_conta,
-        default=["Centralizadas"] if "Centralizadas" in tipos_conta else []
+        tipos,
+        default=["Centralizadas"] if "Centralizadas" in tipos else []
     )
 
-    empresa = st.multiselect(
-        "Empresa",
-        sorted(df["empresa"].dropna().astype(str).unique())
-    )
+    empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
 
     filial = None
     if visao == "Filial":
-        filial = st.selectbox(
-            "Filial",
-            sorted(df["cidade"].dropna().astype(str).unique())
-        )
+        filial = st.selectbox("Filial", sorted(df.cidade.unique()))
 
 # ======================================================
-# BASE FILTRADA
+# BASE
 # ======================================================
-base = df[df["ano"] == ano].copy()
-
+base = df.copy()
+if ano:
+    base = base[base.ano == ano]
 if tipo_conta:
-    base = base[base["tipo_conta"].isin(tipo_conta)]
+    base = base[base.tipo_conta.isin(tipo_conta)]
 if empresa:
-    base = base[base["empresa"].isin(empresa)]
+    base = base[base.empresa.isin(empresa)]
 if filial:
-    base = base[base["cidade"] == filial]
+    base = base[base.cidade == filial]
 
 # ======================================================
-# VISÃO COMPARATIVO (CORRIGIDA)
+# COMPARATIVO (PRINT 3)
 # ======================================================
 if visao == "Comparativo":
 
-    anos_comp = st.multiselect(
-        "Anos para comparação",
-        anos,
-        default=anos[-2:] if len(anos) >= 2 else anos
-    )
+    anos_comp = st.multiselect("Anos para comparação", anos, default=anos[-2:])
 
     comp = (
-        base[
-            (base["tipo"] == "REALIZADO") &
-            (base["ano"].isin(anos_comp))
-        ]
+        base[(base.tipo == "REALIZADO") & (base.ano.isin(anos_comp))]
         .groupby(["ano","mes_num","mes_nome"], as_index=False)
         .agg(valor=("valor","sum"))
         .sort_values("mes_num")
     )
 
-    # GRÁFICO
     fig = px.line(
         comp,
-        x="mes_nome",
-        y="valor",
-        color="ano",
-        markers=True,
-        category_orders={"mes_nome": ORDEM_MESES}
+        x="mes_nome", y="valor", color="ano",
+        category_orders={"mes_nome": ORDEM_MESES},
+        markers=True
     )
-    fig.update_layout(xaxis_title="Mês", yaxis_title="R$")
     st.plotly_chart(fig, use_container_width=True)
 
-    # TABELA
-    tabela = (
-        comp.pivot(index="ano", columns="mes_nome", values="valor")
-        .reindex(columns=ORDEM_MESES)
-    )
+    tabela = comp.pivot(index="ano", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
 
-    # VARIAÇÃO % (SÓ SE OS DOIS ANOS EXISTIREM)
     if len(anos_comp) == 2:
         a1, a2 = sorted(anos_comp)
         if a1 in tabela.index and a2 in tabela.index:
             tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
 
-    # FORMATAÇÃO FINAL
     tabela_fmt = tabela.copy()
     for idx in tabela_fmt.index:
-        if idx == "Variação %":
-            tabela_fmt.loc[idx] = tabela_fmt.loc[idx].apply(fmt_pct)
-        else:
-            tabela_fmt.loc[idx] = tabela_fmt.loc[idx].apply(fmt_mi)
+        tabela_fmt.loc[idx] = tabela_fmt.loc[idx].apply(fmt_pct if idx == "Variação %" else fmt_mi)
 
     st.dataframe(tabela_fmt, use_container_width=True)
 
 # ======================================================
-# CONSOLIDADO / FILIAL
+# CONSOLIDADO / FILIAL (PRINT 1 e 2)
 # ======================================================
 else:
 
-    mensal = (
-        base.groupby(["mes_num","mes_nome","tipo"], as_index=False)
-        .agg(valor=("valor","sum"))
-        .sort_values("mes_num")
-    )
+    mensal = base.groupby(["mes_num","mes_nome","tipo"])["valor"].sum().reset_index()
+
+    mes_real = mensal[mensal.tipo=="REALIZADO"]["mes_num"].max() or 0
+    r = mensal[(mensal.tipo=="REALIZADO") & (mensal.mes_num<=mes_real)].valor.sum()
+    f_rest = mensal[(mensal.tipo=="FORECAST") & (mensal.mes_num>mes_real)].valor.sum()
+    o_rest = mensal[(mensal.tipo=="ORÇADO") & (mensal.mes_num>mes_real)].valor.sum()
+
+    tf = mensal[mensal.tipo=="FORECAST"].valor.sum()
+    to = mensal[mensal.tipo=="ORÇADO"].valor.sum()
+
+    af = r + f_rest
+    ao = r + o_rest
+
+    c1,c2,c3 = st.columns(3)
+    c1.markdown(card("REALIZADO x FORECAST",fmt_pct(af/tf*100 if tf else None),"blue"),True)
+    c2.markdown(card("ACUMULADO FORECAST",fmt_mi(af),"blue"),True)
+    c3.markdown(card("TOTAL FORECAST",fmt_mi(tf),"blue"),True)
+
+    c4,c5,c6 = st.columns(3)
+    c4.markdown(card("REALIZADO x ORÇADO",fmt_pct(ao/to*100 if to else None),"green"),True)
+    c5.markdown(card("ACUMULADO ORÇAMENTO",fmt_mi(ao),"green"),True)
+    c6.markdown(card("TOTAL ORÇAMENTO",fmt_mi(to),"green"),True)
+
+    c7,c8 = st.columns(2)
+    c7.markdown(card("ACUMULADO REALIZADO",fmt_mi(r),"orange"),True)
+    c8.markdown(card("REALIZADO + FORECAST",fmt_mi(af),"orange"),True)
 
     fig = px.line(
-        mensal,
-        x="mes_nome",
-        y="valor",
-        color="tipo",
-        markers=True,
-        category_orders={"mes_nome": ORDEM_MESES}
+        mensal, x="mes_nome", y="valor", color="tipo",
+        category_orders={"mes_nome": ORDEM_MESES}, markers=True
     )
-    fig.update_layout(xaxis_title="Mês", yaxis_title="R$")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader(f"Ano {ano}")
-    tabela = (
-        mensal.pivot(index="tipo", columns="mes_nome", values="valor")
-        .reindex(columns=ORDEM_MESES)
-    )
+    tabela = mensal.pivot(index="tipo", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
     st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
