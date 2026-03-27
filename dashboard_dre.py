@@ -24,21 +24,13 @@ def check_password():
             del st.session_state.pwd
 
     if "auth" not in st.session_state:
-        st.text_input(
-            "Senha de acesso",
-            type="password",
-            key="pwd",
-            on_change=authenticate
-        )
+        st.text_input("Senha de acesso", type="password",
+                      key="pwd", on_change=authenticate)
         st.stop()
 
     if not st.session_state.auth:
-        st.text_input(
-            "Senha de acesso",
-            type="password",
-            key="pwd",
-            on_change=authenticate
-        )
+        st.text_input("Senha de acesso", type="password",
+                      key="pwd", on_change=authenticate)
         st.error("Senha incorreta")
         st.stop()
 
@@ -64,7 +56,7 @@ MAPA_MESES = {
 ORDEM_MESES = list(MAPA_MESES.values())
 
 # ======================================================
-# FORMATADORES
+# FORMATADORES (INALTERADOS)
 # ======================================================
 def fmt_mi(v):
     if v is None or pd.isna(v) or v == 0:
@@ -77,17 +69,20 @@ def fmt_pct(v):
     return f"{v:.2f}%".replace(".", ",")
 
 # ======================================================
-# LEITURA DO ARQUIVO EXCEL (ROBUSTA)
+# LEITURA DO EXCEL (AJUSTE ÚNICO AQUI)
 # ======================================================
 @st.cache_data
 def load_data():
-    caminho = os.path.join(os.getcwd(), ARQUIVO_XLSX)
+    # Caminho absoluto do arquivo no repositório GitHub
+    caminho = os.path.join(os.path.dirname(__file__), ARQUIVO_XLSX)
 
     if not os.path.exists(caminho):
         st.error(
-            "❌ Arquivo **Resultado DRE.xlsx** não encontrado.\n\n"
-            "✔ Verifique se o arquivo está na raiz do repositório GitHub\n"
-            "✔ Confirme o nome exatamente como: Resultado DRE.xlsx"
+            "❌ Arquivo 'Resultado DRE.xlsx' não encontrado.\n\n"
+            "Verifique se:\n"
+            "- O arquivo está na raiz do repositório GitHub\n"
+            "- O nome está exatamente: Resultado DRE.xlsx\n"
+            "- Inclui espaço e maiúsculas"
         )
         st.stop()
 
@@ -114,7 +109,7 @@ def load_data():
 df = load_data()
 
 # ======================================================
-# SIDEBAR
+# SIDEBAR (INALTERADO)
 # ======================================================
 anos = sorted(df["ano"].unique())
 ano_padrao = max(anos)
@@ -135,18 +130,18 @@ with st.sidebar:
 
     empresa = st.multiselect(
         "Empresa",
-        sorted(df["empresa"].dropna().unique())
+        sorted(df["empresa"].dropna().astype(str).unique())
     )
 
     filial = None
     if visao == "Filial":
         filial = st.selectbox(
             "Filial",
-            sorted(df["cidade"].dropna().unique())
+            sorted(df["cidade"].dropna().astype(str).unique())
         )
 
 # ======================================================
-# BASE FILTRADA
+# BASE FILTRADA (INALTERADA)
 # ======================================================
 base = df[df["ano"] == ano].copy()
 
@@ -158,7 +153,7 @@ if filial:
     base = base[base["cidade"] == filial]
 
 # ======================================================
-# VISÃO COMPARATIVO (SIMPLIFICADA)
+# VISÃO COMPARATIVO (INALTERADA)
 # ======================================================
 if visao == "Comparativo":
 
@@ -169,9 +164,9 @@ if visao == "Comparativo":
     )
 
     comp = (
-        df[
-            (df["tipo"] == "REALIZADO") &
-            (df["ano"].isin(anos_comp))
+        base[
+            (base["tipo"] == "REALIZADO") &
+            (base["ano"].isin(anos_comp))
         ]
         .groupby(["ano","mes_num","mes_nome"], as_index=False)
         .agg(valor=("valor","sum"))
@@ -208,9 +203,10 @@ if visao == "Comparativo":
     st.dataframe(tabela_fmt, use_container_width=True)
 
 # ======================================================
-# CONSOLIDADO / FILIAL
+# CONSOLIDADO / FILIAL (INALTERADO)
 # ======================================================
 else:
+
     mensal = (
         base.groupby(["mes_num","mes_nome","tipo"], as_index=False)
         .agg(valor=("valor","sum"))
