@@ -46,7 +46,7 @@ st.caption(f"Atualizado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 # ======================================================
 # CONSTANTES
 # ======================================================
-ARQUIVO_DRE = "Resultado_dre.xlsx"
+ARQUIVO_DRE = "Resultado DRE.xlsx"
 
 MAPA_MESES = {
     1:"janeiro",2:"fevereiro",3:"março",4:"abril",
