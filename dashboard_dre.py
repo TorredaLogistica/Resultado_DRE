@@ -65,7 +65,7 @@ def fmt_pct(v): return "" if pd.isna(v) else f"{v:.2f}%".replace(".", ",")
 # ======================================================
 # DADOS
 # ======================================================
-ARQUIVO = "Resultado_dre.xlsx"
+ARQUIVO = "Resultado DRE.xlsx"
 
 @st.cache_data
 def load():
