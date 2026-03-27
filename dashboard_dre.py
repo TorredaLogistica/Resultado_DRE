@@ -87,7 +87,7 @@ st.markdown("""
 # ======================================================
 # CONSTANTES
 # ======================================================
-ARQUIVO_DRE = "Resultado_dre.xlsx"
+ARQUIVO_DRE = "Resultado DRE.xlsx"
 
 MAPA_MESES = {
     1:"janeiro",2:"fevereiro",3:"março",4:"abril",
