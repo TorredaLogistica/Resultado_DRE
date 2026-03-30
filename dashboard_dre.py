@@ -220,32 +220,33 @@ else:
     st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
 
 # ======================================================
-# RANKING DE GASTOS POR EMPRESA
+# RANKING DE GASTOS (APENAS REALIZADO)
 # ======================================================
 
-st.subheader("Ranking de Gastos por Empresa (Menor → Maior)")
+st.subheader("Ranking de Gastos por Empresa – Realizado (Menor → Maior)")
 
 rank_empresa = (
-    base
+    base[base.tipo == "REALIZADO"]              # ✅ somente realizado
     .groupby("empresa", as_index=False)
-    .agg(gasto_total=("valor", "sum"))
-    .sort_values("gasto_total")  # menor -> maior
+    .agg(gasto_realizado=("valor", "sum"))
+    .sort_values("gasto_realizado")              # ✅ menor → maior
 )
 
 fig_rank_empresa = px.bar(
     rank_empresa,
     x="empresa",
-    y="gasto_total",
-    text=rank_empresa["gasto_total"].apply(
-        lambda x: f"R$ {x/1e6:,.2f} Mi".replace(",", "X").replace(".", ",").replace("X", ".")
+    y="gasto_realizado",
+    text=rank_empresa["gasto_realizado"].apply(
+        lambda x: f"R$ {x/1e6:,.2f} Mi"
+        .replace(",", "X").replace(".", ",").replace("X", ".")
     ),
-    color="gasto_total",
+    color="gasto_realizado",
     color_continuous_scale="RdYlGn"
 )
 
 fig_rank_empresa.update_layout(
     xaxis_title="Empresa",
-    yaxis_title="Gasto Total (R$)",
+    yaxis_title="Gasto Realizado (R$)",
     showlegend=False
 )
 
