@@ -113,6 +113,14 @@ if "empresa_rank" not in st.session_state:
 # SIDEBAR
 # ======================================================
 
+# ======================================================
+# SIDEBAR
+# ======================================================
+
+anos = sorted(df.ano.unique())
+ano_padrao = max(anos)
+tipos = sorted(df.tipo_conta.dropna().unique())
+
 with st.sidebar:
     visao = st.radio(
         "Visão",
@@ -153,7 +161,7 @@ with st.sidebar:
             "Filial",
             sorted(df.cidade.unique())
         )
-
+        
 # ============================
 # BASE PARA RANKING (IGNORA EMPRESA)
 # ============================
