@@ -140,13 +140,15 @@ with st.sidebar:
     )
 
     bloquear_empresa = st.session_state.empresa_rank is None
-     st.caption("ℹ️ Selecione uma empresa no ranking para habilitar o filtro")
-
+     
     empresa = st.multiselect(
         "Empresa",
         sorted(df.empresa.unique()),
         disabled=bloquear_empresa
     )
+    
+if bloquear_empresa:
+    st.caption("ℹ️ Selecione uma empresa no ranking para habilitar este filtro")
 
     filial = None
     if visao == "Filial":
