@@ -299,21 +299,21 @@ if st.session_state.empresa_rank is None:
 # ======================================================
 # VISÃO 2 – DETALHE MENSAL
 # ======================================================
+
 else:
-    
-# Empresa usada no detalhamento:
-# - prioridade para filtro da sidebar
-# - fallback para empresa do ranking
-if empresa:
-    emp = empresa[0]
-else:
-    emp = st.session_state.empresa_rank
+    # -------------------------------
+    # Define empresa do detalhamento
+    # -------------------------------
+    if empresa:
+        emp = empresa[0]
+    else:
+        emp = st.session_state.empresa_rank
 
     st.markdown(f"### 📊 Detalhamento Mensal – **{emp}**")
 
     detalhe = (
         base_real_rank[base_real_rank.empresa == emp]
-        .groupby(["mes_num","mes_nome"], as_index=False)
+        .groupby(["mes_num", "mes_nome"], as_index=False)
         .agg(valor=("valor", "sum"))
         .sort_values("mes_num")
     )
@@ -322,8 +322,8 @@ else:
         detalhe,
         x="mes_nome",
         y="valor",
-        text=detalhe["valor"].apply(fmt_mi),
         color="valor",
+        text=detalhe["valor"].apply(fmt_mi),
         color_continuous_scale="Blues"
     )
 
