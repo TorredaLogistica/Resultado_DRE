@@ -108,11 +108,6 @@ df = load()
 if "empresa_rank" not in st.session_state:
     st.session_state.empresa_rank = None
 
-
-# ======================================================
-# SIDEBAR
-# ======================================================
-
 # ======================================================
 # SIDEBAR
 # ======================================================
@@ -153,7 +148,7 @@ with st.sidebar:
 
     # ✅ MENSAGEM NO LUGAR CERTO (linha verde do print)
     if bloquear_empresa:
-        st.caption("ℹ️ Selecione uma empresa no ranking para habilitar este filtro")
+        st.caption("⚠️ Selecione uma empresa no ranking para habilitar este filtro")
 
     filial = None
     if visao == "Filial":
