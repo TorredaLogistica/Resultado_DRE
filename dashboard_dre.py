@@ -132,24 +132,36 @@ with st.sidebar:
         default=["Centralizadas"] if "Centralizadas" in tipos else []
     )
 
-    empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
+    
+empresa = st.multiselect(
+    "Empresa",
+    sorted(df.empresa.unique()),
+    disabled=st.session_state.empresa_rank is None
+)
+
 
     filial = None
     if visao == "Filial":
         filial = st.selectbox("Filial", sorted(df.cidade.unique()))
 
-# ======================================================
-# BASE
-# ======================================================
-base = df.copy()
+
+# ============================
+# BASE PARA RANKING (IGNORA EMPRESA)
+# ============================
+base_rank = df.copy()
 if ano:
-    base = base[base.ano == ano]
+    base_rank = base_rank[base_rank.ano == ano]
 if tipo_conta:
-    base = base[base.tipo_conta.isin(tipo_conta)]
+    base_rank = base_rank[base_rank.tipo_conta.isin(tipo_conta)]
+if filial:
+    base_rank = base_rank[base_rank.cidade == filial]
+
+# ============================
+# BASE PARA DETALHE (RESPEITA EMPRESA)
+# ============================
+base = base_rank.copy()
 if empresa:
     base = base[base.empresa.isin(empresa)]
-if filial:
-    base = base[base.cidade == filial]
 
 # ======================================================
 # COMPARATIVO (PRINT 3)
@@ -231,31 +243,80 @@ else:
 # RANKING DE GASTOS (APENAS REALIZADO)
 # ======================================================
 
-st.subheader("Ranking de Gastos por Empresa – Realizado (Menor → Maior)")
+st.subheader("Ranking de Gastos por Empresa – Realizado")
 
-rank_empresa = (
-    base[base.tipo == "REALIZADO"]              # ✅ somente realizado
-    .groupby("empresa", as_index=False)
-    .agg(gasto_realizado=("valor", "sum"))
-    .sort_values("gasto_realizado")              # ✅ menor → maior
-)
+base_real_rank = base_rank[base_rank.tipo == "REALIZADO"]
 
-fig_rank_empresa = px.bar(
-    rank_empresa,
-    x="empresa",
-    y="gasto_realizado",
-    text=rank_empresa["gasto_realizado"].apply(
-        lambda x: f"R$ {x/1e6:,.2f} Mi"
-        .replace(",", "X").replace(".", ",").replace("X", ".")
-    ),
-    color="gasto_realizado",
-    color_continuous_scale="RdYlGn"
-)
+# ======================================================
+# VISÃO 1 – RANKING GERAL
+# ======================================================
+if st.session_state.empresa_rank is None:
 
-fig_rank_empresa.update_layout(
-    xaxis_title="Empresa",
-    yaxis_title="Gasto Realizado (R$)",
-    showlegend=False
-)
+    rank_empresa = (
+        base_real_rank
+        .groupby("empresa", as_index=False)
+        .agg(gasto=("valor", "sum"))
+        .sort_values("gasto")
+    )
 
-st.plotly_chart(fig_rank_empresa, use_container_width=True)
+    fig_rank = px.bar(
+        rank_empresa,
+        y="empresa",
+        x="gasto",
+        orientation="h",
+        color="gasto",
+        text=rank_empresa["gasto"].apply(fmt_mi),
+        color_continuous_scale="RdYlGn"
+    )
+
+    fig_rank.update_layout(
+        xaxis_title="Gasto Realizado (R$)",
+        yaxis_title="Empresa",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_rank, use_container_width=True)
+
+    empresa_sel = st.selectbox(
+        "Clique para detalhar a empresa:",
+        [""] + rank_empresa["empresa"].tolist()
+    )
+
+    if empresa_sel:
+        st.session_state.empresa_rank = empresa_sel
+        st.rerun()
+
+# ======================================================
+# VISÃO 2 – DETALHE MENSAL
+# ======================================================
+else:
+    emp = st.session_state.empresa_rank
+    st.markdown(f"### 📊 Detalhamento Mensal – **{emp}**")
+
+    detalhe = (
+        base_real_rank[base_real_rank.empresa == emp]
+        .groupby(["mes_num","mes_nome"], as_index=False)
+        .agg(valor=("valor", "sum"))
+        .sort_values("mes_num")
+    )
+
+    fig_det = px.bar(
+        detalhe,
+        x="mes_nome",
+        y="valor",
+        text=detalhe["valor"].apply(fmt_mi),
+        color="valor",
+        color_continuous_scale="Blues"
+    )
+
+    fig_det.update_layout(
+        xaxis_title="Mês",
+        yaxis_title="Gasto Realizado (R$)",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_det, use_container_width=True)
+
+    if st.button("⬅ Voltar ao Ranking"):
+        st.session_state.empresa_rank = None
+        st.rerun()
