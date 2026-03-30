@@ -140,6 +140,7 @@ with st.sidebar:
     )
 
     bloquear_empresa = st.session_state.empresa_rank is None
+     st.caption("ℹ️ Selecione uma empresa no ranking para habilitar o filtro")
 
     empresa = st.multiselect(
         "Empresa",
@@ -261,8 +262,7 @@ base_real_rank = base_rank[base_rank.tipo == "REALIZADO"]
 # VISÃO 1 – RANKING GERAL
 # ======================================================
 if st.session_state.empresa_rank is None:
-    st.caption("ℹ️ Selecione uma empresa no ranking para habilitar o filtro")
-
+    
     rank_empresa = (
         base_real_rank
         .groupby("empresa", as_index=False)
