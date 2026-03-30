@@ -262,6 +262,8 @@ base_real_rank = base_rank[base_rank.tipo == "REALIZADO"]
 # ======================================================
 # VISÃO 1 – RANKING GERAL
 # ======================================================
+empresa_sel = None
+
 if st.session_state.empresa_rank is None:
     
     rank_empresa = (
