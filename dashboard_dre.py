@@ -112,17 +112,24 @@ if "empresa_rank" not in st.session_state:
 # ======================================================
 # SIDEBAR
 # ======================================================
+
 anos = sorted(df.ano.unique())
 ano_padrao = max(anos)
-
 tipos = sorted(df.tipo_conta.dropna().unique())
 
 with st.sidebar:
-    visao = st.radio("Visão", ["Consolidado","Filial","Comparativo"])
+    visao = st.radio(
+        "Visão",
+        ["Consolidado", "Filial", "Comparativo"]
+    )
 
     # 🔹 Filtro de ano NÃO aparece no Comparativo
     if visao != "Comparativo":
-        ano = st.selectbox("Ano", anos, index=anos.index(ano_padrao))
+        ano = st.selectbox(
+            "Ano",
+            anos,
+            index=anos.index(ano_padrao)
+        )
     else:
         ano = None
 
@@ -132,17 +139,20 @@ with st.sidebar:
         default=["Centralizadas"] if "Centralizadas" in tipos else []
     )
 
-    
-empresa = st.multiselect(
-    "Empresa",
-    sorted(df.empresa.unique()),
-    disabled=st.session_state.empresa_rank is None
-)
+    bloquear_empresa = st.session_state.empresa_rank is None
 
+    empresa = st.multiselect(
+        "Empresa",
+        sorted(df.empresa.unique()),
+        disabled=bloquear_empresa
+    )
 
     filial = None
     if visao == "Filial":
-        filial = st.selectbox("Filial", sorted(df.cidade.unique()))
+        filial = st.selectbox(
+            "Filial",
+            sorted(df.cidade.unique())
+        )
 
 
 # ============================
