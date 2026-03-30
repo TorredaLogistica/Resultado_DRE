@@ -317,7 +317,7 @@ if not pizza_cd.empty:
         pizza_cd,
         names="cidade",
         values="valor",
-        title="Participação % por CD (Realizado)",
+        st.subheader("Participação % por CD – Realizado"),
         hole=0.4  # donut (mais moderno)
     )
 
