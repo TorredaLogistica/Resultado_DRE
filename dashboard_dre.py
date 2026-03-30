@@ -177,34 +177,70 @@ if empresa:
     base = base[base.empresa.isin(empresa)]
 
 # ======================================================
-# CONSOLIDADO / FILIAL
+# COMPARATIVO
 # ======================================================
-if visao != "Comparativo":
+if visao == "Comparativo":
 
-    mensal = (
-        base
-        .groupby(["mes_num","mes_nome","tipo"], as_index=False)
-        .agg(valor=("valor","sum"))
+    anos_comp = st.multiselect(
+        "Anos para comparação",
+        anos,
+        default=anos[-2:] if len(anos) >= 2 else anos
     )
 
-    fig = px.line(
-        mensal,
+    base_comp = df[df.tipo == "REALIZADO"].copy()
+
+    if tipo_conta:
+        base_comp = base_comp[base_comp.tipo_conta.isin(tipo_conta)]
+
+    if empresa:
+        base_comp = base_comp[base_comp.empresa.isin(empresa)]
+
+    comp = (
+        base_comp[base_comp.ano.isin(anos_comp)]
+        .groupby(["ano", "mes_num", "mes_nome"], as_index=False)
+        .agg(valor=("valor", "sum"))
+        .sort_values("mes_num")
+    )
+
+    fig_comp = px.line(
+        comp,
         x="mes_nome",
         y="valor",
-        color="tipo",
+        color="ano",
         category_orders={"mes_nome": ORDEM_MESES},
         markers=True
     )
-    st.plotly_chart(fig, use_container_width=True)
+
+    fig_comp.update_layout(
+        xaxis_title="Mês",
+        yaxis_title="Valor Realizado (R$)",
+        legend_title="Ano"
+    )
+
+    st.plotly_chart(fig_comp, use_container_width=True)
 
     tabela = (
-        mensal
-        .pivot(index="tipo", columns="mes_nome", values="valor")
+        comp
+        .pivot(index="ano", columns="mes_nome", values="valor")
         .reindex(columns=ORDEM_MESES)
     )
 
-    st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
+    if len(tabela.index) == 2:
+        a1, a2 = tabela.index.sort_values()
+        tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
 
+    tabela_fmt = tabela.copy()
+    for idx in tabela_fmt.index:
+        tabela_fmt.loc[idx] = tabela_fmt.loc[idx].apply(
+            fmt_pct if idx == "Variação %" else fmt_mi
+        )
+
+    st.dataframe(tabela_fmt, use_container_width=True)
+
+# ======================================================
+# CONSOLIDADO / FILIAL
+# ======================================================
+else:
     # ==================================================
     # RANKING DE GASTOS – REALIZADO
     # ==================================================
