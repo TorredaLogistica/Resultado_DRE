@@ -113,10 +113,6 @@ if "empresa_rank" not in st.session_state:
 # SIDEBAR
 # ======================================================
 
-anos = sorted(df.ano.unique())
-ano_padrao = max(anos)
-tipos = sorted(df.tipo_conta.dropna().unique())
-
 with st.sidebar:
     visao = st.radio(
         "Visão",
@@ -140,15 +136,16 @@ with st.sidebar:
     )
 
     bloquear_empresa = st.session_state.empresa_rank is None
-     
+
     empresa = st.multiselect(
         "Empresa",
         sorted(df.empresa.unique()),
         disabled=bloquear_empresa
     )
-    
-if bloquear_empresa:
-    st.caption("ℹ️ Selecione uma empresa no ranking para habilitar este filtro")
+
+    # ✅ MENSAGEM NO LUGAR CERTO (linha verde do print)
+    if bloquear_empresa:
+        st.caption("ℹ️ Selecione uma empresa no ranking para habilitar este filtro")
 
     filial = None
     if visao == "Filial":
@@ -156,7 +153,6 @@ if bloquear_empresa:
             "Filial",
             sorted(df.cidade.unique())
         )
-
 
 # ============================
 # BASE PARA RANKING (IGNORA EMPRESA)
