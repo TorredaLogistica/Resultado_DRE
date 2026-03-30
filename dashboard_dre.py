@@ -294,6 +294,44 @@ if st.session_state.empresa_rank is None:
         [""] + rank_empresa["empresa"].tolist()
     )
 
+# ======================================================
+# GRÁFICO DE PIZZA – % REALIZADO POR CD
+# ======================================================
+
+# Define base do gráfico de pizza
+if empresa_sel:
+    base_pizza = base_real_rank[base_real_rank.empresa == empresa_sel]
+else:
+    base_pizza = base_real_rank.copy()
+
+# Agrupa por CD (cidade)
+pizza_cd = (
+    base_pizza
+    .groupby("cidade", as_index=False)
+    .agg(valor=("valor", "sum"))
+)
+
+# Só gera o gráfico se houver dados
+if not pizza_cd.empty:
+    fig_pizza = px.pie(
+        pizza_cd,
+        names="cidade",
+        values="valor",
+        title="Participação % por CD (Realizado)",
+        hole=0.4  # donut (mais moderno)
+    )
+
+    fig_pizza.update_traces(
+        textposition="inside",
+        textinfo="percent+label"
+    )
+
+    fig_pizza.update_layout(
+        showlegend=True
+    )
+
+    st.plotly_chart(fig_pizza, use_container_width=True)
+    
     if empresa_sel:
         st.session_state.empresa_rank = empresa_sel
         st.rerun()
