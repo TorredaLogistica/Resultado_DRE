@@ -101,6 +101,14 @@ def load():
 
 df = load()
 
+
+# ========================================
+# ESTADO DO DRILL-DOWN (RANKING EMPRESA)
+# ========================================
+if "empresa_rank" not in st.session_state:
+    st.session_state.empresa_rank = None
+
+
 # ======================================================
 # SIDEBAR
 # ======================================================
