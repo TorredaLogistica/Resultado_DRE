@@ -102,3 +102,184 @@ def load():
 
     df = df.dropna(subset=["data","valor"])
     df["ano"] = df["data"].dt.year
+    df["mes_num"] = df["data"].dt.month
+    df["mes_nome"] = df["mes_num"].map(MAPA_MESES)
+
+    return df
+
+df = load()
+
+# ======================================================
+# ESTADO DO DRILL-DOWN
+# ======================================================
+if "empresa_rank" not in st.session_state:
+    st.session_state.empresa_rank = None
+
+# ======================================================
+# SIDEBAR
+# ======================================================
+anos = sorted(df.ano.unique())
+ano_padrao = max(anos)
+tipos = sorted(df.tipo_conta.dropna().unique())
+
+with st.sidebar:
+    visao = st.radio(
+        "Visão",
+        ["Consolidado", "Filial", "Comparativo"]
+    )
+
+    if visao != "Comparativo":
+        ano = st.selectbox(
+            "Ano",
+            anos,
+            index=anos.index(ano_padrao)
+        )
+    else:
+        ano = None
+
+    tipo_conta = st.multiselect(
+        "Tipo da Conta",
+        tipos,
+        default=["Centralizadas"] if "Centralizadas" in tipos else []
+    )
+
+    bloquear_empresa = st.session_state.empresa_rank is None
+
+    empresa = st.multiselect(
+        "Empresa",
+        sorted(df.empresa.unique()),
+        disabled=bloquear_empresa
+    )
+
+    if bloquear_empresa:
+        st.caption("ℹ️ Selecione uma empresa no ranking para habilitar este filtro")
+
+    filial = None
+    if visao == "Filial":
+        filial = st.selectbox(
+            "Filial",
+            sorted(df.cidade.unique())
+        )
+
+# ======================================================
+# BASES
+# ======================================================
+base_rank = df.copy()
+if ano:
+    base_rank = base_rank[base_rank.ano == ano]
+if tipo_conta:
+    base_rank = base_rank[base_rank.tipo_conta.isin(tipo_conta)]
+if filial:
+    base_rank = base_rank[base_rank.cidade == filial]
+
+base = base_rank.copy()
+if empresa:
+    base = base[base.empresa.isin(empresa)]
+
+# ======================================================
+# CONSOLIDADO / FILIAL
+# ======================================================
+if visao != "Comparativo":
+
+    mensal = (
+        base
+        .groupby(["mes_num","mes_nome","tipo"], as_index=False)
+        .agg(valor=("valor","sum"))
+    )
+
+    fig = px.line(
+        mensal,
+        x="mes_nome",
+        y="valor",
+        color="tipo",
+        category_orders={"mes_nome": ORDEM_MESES},
+        markers=True
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    tabela = (
+        mensal
+        .pivot(index="tipo", columns="mes_nome", values="valor")
+        .reindex(columns=ORDEM_MESES)
+    )
+
+    st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
+
+    # ==================================================
+    # RANKING DE GASTOS – REALIZADO
+    # ==================================================
+    st.subheader("Ranking de Gastos por Empresa – Realizado")
+
+    base_real_rank = base_rank[base_rank.tipo == "REALIZADO"]
+
+    if st.session_state.empresa_rank is None:
+
+        rank_empresa = (
+            base_real_rank
+            .groupby("empresa", as_index=False)
+            .agg(gasto=("valor","sum"))
+            .sort_values("gasto")
+        )
+
+        fig_rank = px.bar(
+            rank_empresa,
+            y="empresa",
+            x="gasto",
+            orientation="h",
+            color="gasto",
+            text=rank_empresa["gasto"].apply(fmt_mi),
+            color_continuous_scale="RdYlGn"
+        )
+
+        fig_rank.update_layout(
+            xaxis_title="Gasto Realizado (R$)",
+            yaxis_title="Empresa",
+            showlegend=False
+        )
+
+        st.plotly_chart(fig_rank, use_container_width=True)
+
+        empresa_sel = st.selectbox(
+            "Clique para detalhar a empresa:",
+            [""] + rank_empresa["empresa"].tolist()
+        )
+
+        if empresa_sel:
+            st.session_state.empresa_rank = empresa_sel
+            st.rerun()
+
+    else:
+        if empresa:
+            emp = empresa[0]
+        else:
+            emp = st.session_state.empresa_rank
+
+        st.subheader(f"Detalhamento Mensal – {emp}")
+
+        detalhe = (
+            base_real_rank[base_real_rank.empresa == emp]
+            .groupby(["mes_num","mes_nome"], as_index=False)
+            .agg(valor=("valor","sum"))
+            .sort_values("mes_num")
+        )
+
+        fig_det = px.bar(
+            detalhe,
+            x="mes_nome",
+            y="valor",
+            text=detalhe["valor"].apply(fmt_mi),
+            color="valor",
+            color_continuous_scale="Blues"
+        )
+
+        fig_det.update_layout(
+            xaxis_title="Mês",
+            yaxis_title="Gasto Realizado (R$)",
+            showlegend=False
+        )
+
+        st.plotly_chart(fig_det, use_container_width=True)
+
+        if st.button("⬅ Voltar ao Ranking"):
+            st.session_state.empresa_rank = None
+            st.rerun()
