@@ -298,6 +298,8 @@ if st.session_state.empresa_rank is None:
 # GRÁFICO DE PIZZA – % REALIZADO POR CD
 # ======================================================
 
+st.subheader("Participação % por CD – Realizado")
+
 # Define base do gráfico de pizza
 if empresa_sel:
     base_pizza = base_real_rank[base_real_rank.empresa == empresa_sel]
@@ -317,7 +319,6 @@ if not pizza_cd.empty:
         pizza_cd,
         names="cidade",
         values="valor",
-        st.subheader("Participação % por CD – Realizado"),
         hole=0.4  # donut (mais moderno)
     )
 
