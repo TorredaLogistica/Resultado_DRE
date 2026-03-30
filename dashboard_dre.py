@@ -218,3 +218,35 @@ else:
 
     tabela = mensal.pivot(index="tipo", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
     st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
+
+# ======================================================
+# RANKING DE GASTOS POR EMPRESA
+# ======================================================
+
+st.subheader("Ranking de Gastos por Empresa (Menor → Maior)")
+
+rank_empresa = (
+    base
+    .groupby("empresa", as_index=False)
+    .agg(gasto_total=("valor", "sum"))
+    .sort_values("gasto_total")  # menor -> maior
+)
+
+fig_rank_empresa = px.bar(
+    rank_empresa,
+    x="empresa",
+    y="gasto_total",
+    text=rank_empresa["gasto_total"].apply(
+        lambda x: f"R$ {x/1e6:,.2f} Mi".replace(",", "X").replace(".", ",").replace("X", ".")
+    ),
+    color="gasto_total",
+    color_continuous_scale="RdYlGn"
+)
+
+fig_rank_empresa.update_layout(
+    xaxis_title="Empresa",
+    yaxis_title="Gasto Total (R$)",
+    showlegend=False
+)
+
+st.plotly_chart(fig_rank_empresa, use_container_width=True)
