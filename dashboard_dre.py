@@ -300,7 +300,15 @@ if st.session_state.empresa_rank is None:
 # VISÃO 2 – DETALHE MENSAL
 # ======================================================
 else:
+    
+# Empresa usada no detalhamento:
+# - prioridade para filtro da sidebar
+# - fallback para empresa do ranking
+if empresa:
+    emp = empresa[0]
+else:
     emp = st.session_state.empresa_rank
+
     st.markdown(f"### 📊 Detalhamento Mensal – **{emp}**")
 
     detalhe = (
