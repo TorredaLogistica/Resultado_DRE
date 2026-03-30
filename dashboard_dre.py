@@ -298,3 +298,66 @@ else:
     )
 
     st.plotly_chart(fig_mensal, use_container_width=True)
+
+
+
+# ======================================================
+# GRÁFICOS DE PIZZA (%)
+# ======================================================
+base_pizza = base_real.copy()
+
+col_pie1, col_pie2 = st.columns(2)
+
+# -----------------------------
+# % POR CD
+# -----------------------------
+with col_pie1:
+    st.subheader("Participação % por CD – Realizado")
+
+    pizza_cd = (
+        base_pizza
+        .groupby("cidade", as_index=False)
+        .agg(valor=("valor", "sum"))
+    )
+
+    if not pizza_cd.empty:
+        fig_pie_cd = px.pie(
+            pizza_cd,
+            names="cidade",
+            values="valor",
+            hole=0.4
+        )
+
+        fig_pie_cd.update_traces(
+            textinfo="percent+label",
+            textposition="inside"
+        )
+
+        st.plotly_chart(fig_pie_cd, use_container_width=True)
+
+# -----------------------------
+# % POR EMPRESA
+# -----------------------------
+with col_pie2:
+    st.subheader("Participação % por Empresa – Realizado")
+
+    pizza_empresa = (
+        base_pizza
+        .groupby("empresa", as_index=False)
+        .agg(valor=("valor", "sum"))
+    )
+
+    if not pizza_empresa.empty:
+        fig_pie_empresa = px.pie(
+            pizza_empresa,
+            names="empresa",
+            values="valor",
+            hole=0.4
+        )
+
+        fig_pie_empresa.update_traces(
+            textinfo="percent+label",
+            textposition="inside"
+        )
+
+        st.plotly_chart(fig_pie_empresa, use_container_width=True)
