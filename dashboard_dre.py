@@ -228,34 +228,73 @@ else:
     st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
 
 # ======================================================
-# RANKING DE GASTOS (APENAS REALIZADO)
+# GASTOS REALIZADOS
 # ======================================================
+base_real = base[base.tipo == "REALIZADO"]
 
-st.subheader("Ranking de Gastos por Empresa – Realizado (Menor → Maior)")
+# ------------------------------------------------------
+# CASO 1 – NENHUMA EMPRESA SELECIONADA → RANKING
+# ------------------------------------------------------
+if not empresa:
 
-rank_empresa = (
-    base[base.tipo == "REALIZADO"]              # ✅ somente realizado
-    .groupby("empresa", as_index=False)
-    .agg(gasto_realizado=("valor", "sum"))
-    .sort_values("gasto_realizado")              # ✅ menor → maior
-)
+    st.subheader("Ranking de Gastos por Empresa – Realizado (Menor → Maior)")
 
-fig_rank_empresa = px.bar(
-    rank_empresa,
-    x="empresa",
-    y="gasto_realizado",
-    text=rank_empresa["gasto_realizado"].apply(
-        lambda x: f"R$ {x/1e6:,.2f} Mi"
-        .replace(",", "X").replace(".", ",").replace("X", ".")
-    ),
-    color="gasto_realizado",
-    color_continuous_scale="RdYlGn"
-)
+    rank_empresa = (
+        base_real
+        .groupby("empresa", as_index=False)
+        .agg(gasto=("valor", "sum"))
+        .sort_values("gasto")
+    )
 
-fig_rank_empresa.update_layout(
-    xaxis_title="Empresa",
-    yaxis_title="Gasto Realizado (R$)",
-    showlegend=False
-)
+    fig_rank_empresa = px.bar(
+        rank_empresa,
+        x="empresa",
+        y="gasto",
+        text=rank_empresa["gasto"].apply(fmt_mi),
+        color="gasto",
+        color_continuous_scale="RdYlGn"
+    )
 
-st.plotly_chart(fig_rank_empresa, use_container_width=True)
+    fig_rank_empresa.update_layout(
+        xaxis_title="Empresa",
+        yaxis_title="Gasto Realizado (R$)",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_rank_empresa, use_container_width=True)
+
+# ------------------------------------------------------
+# CASO 2 – EMPRESA SELECIONADA → MESES REALIZADOS
+# ------------------------------------------------------
+else:
+    emp = empresa[0]
+
+    st.subheader(f"Gastos Mensais – {emp} (Realizado)")
+
+    mensal_emp = (
+        base_real
+        .groupby(["empresa", "mes_num", "mes_nome"], as_index=False)
+        .agg(valor=("valor", "sum"))
+    )
+
+    mensal_emp = (
+        mensal_emp[mensal_emp["empresa"] == emp]
+        .sort_values("mes_num")
+    )
+
+    fig_mensal = px.bar(
+        mensal_emp,
+        x="mes_nome",
+        y="valor",
+        text=mensal_emp["valor"].apply(fmt_mi),
+        color="valor",
+        color_continuous_scale="Blues"
+    )
+
+    fig_mensal.update_layout(
+        xaxis_title="Mês",
+        yaxis_title="Gasto Realizado (R$)",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_mensal, use_container_width=True)
