@@ -316,16 +316,18 @@ else:
 
 
 
+
 # ======================================================
 # GRÁFICOS DE PIZZA (%)
 # ======================================================
 base_pizza = base_real.copy()
 
+# -----------------------------
+# LINHA 1 – CD e EMPRESA
+# -----------------------------
 col_pie1, col_pie2 = st.columns(2)
 
-# -----------------------------
 # % POR CD
-# -----------------------------
 with col_pie1:
     st.subheader("Participação % por CD – Realizado")
 
@@ -342,17 +344,13 @@ with col_pie1:
             values="valor",
             hole=0.4
         )
-
         fig_pie_cd.update_traces(
             textinfo="percent+label",
             textposition="inside"
         )
-
         st.plotly_chart(fig_pie_cd, use_container_width=True)
 
-# -----------------------------
 # % POR EMPRESA
-# -----------------------------
 with col_pie2:
     st.subheader("Participação % por Empresa – Realizado")
 
@@ -369,10 +367,32 @@ with col_pie2:
             values="valor",
             hole=0.4
         )
-
         fig_pie_empresa.update_traces(
             textinfo="percent+label",
             textposition="inside"
         )
-
         st.plotly_chart(fig_pie_empresa, use_container_width=True)
+
+# -----------------------------
+# LINHA 2 – DRE (FULL WIDTH)
+# -----------------------------
+st.subheader("Participação % por DRE – Realizado")
+
+pizza_dre = (
+    base_pizza
+    .groupby("categoria", as_index=False)
+    .agg(valor=("valor", "sum"))
+)
+
+if not pizza_dre.empty:
+    fig_pie_dre = px.pie(
+        pizza_dre,
+        names="categoria",
+        values="valor",
+        hole=0.4
+    )
+    fig_pie_dre.update_traces(
+        textinfo="percent+label",
+        textposition="inside"
+    )
+    st.plotly_chart(fig_pie_dre, use_container_width=True)
