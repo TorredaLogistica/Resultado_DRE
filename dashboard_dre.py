@@ -101,6 +101,8 @@ def load():
 
 df = load()
 
+# ✅ Lista de DREs (coluna C = categoria)
+dres = sorted(df["categoria"].dropna().unique())
 
 # ========================================
 # ESTADO DO DRILL-DOWN (RANKING EMPRESA)
@@ -119,24 +121,24 @@ ano_padrao = max(anos)
 tipos = sorted(df.tipo_conta.dropna().unique())
 
 with st.sidebar:
-    visao = st.radio("Visão", ["Consolidado","Filial","Comparativo"])
+    visao = st.radio("Visão", ["Consolidado", "Filial", "Comparativo"])
 
     if visao != "Comparativo":
         ano = st.selectbox("Ano", anos, index=anos.index(ano_padrao))
     else:
         ano = None
 
-    # ✅ Tipo da Conta com CENTRALIZADAS padrão
+    # Tipo da Conta com CENTRALIZADAS selecionado por padrão
     tipo_conta = st.multiselect(
         "Tipo da Conta",
         tipos,
         default=["CENTRALIZADAS"] if "CENTRALIZADAS" in tipos else []
     )
 
-    # ✅ Empresa
+    # Empresa
     empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
 
-    # ✅ DRE (coluna C = categoria) – logo abaixo de Empresa
+    # ✅ DRE (coluna C)
     dre = st.multiselect("DRE", dres)
 
     filial = None
