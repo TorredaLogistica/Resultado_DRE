@@ -396,3 +396,34 @@ if not pizza_dre.empty:
         textposition="inside"
     )
     st.plotly_chart(fig_pie_dre, use_container_width=True)
+
+# ======================================================
+# RANKING DE GASTOS POR DRE – REALIZADO
+# ======================================================
+st.subheader("Ranking de Gastos por DRE – Realizado (Menor → Maior)")
+
+rank_dre = (
+    base_real
+    .groupby("categoria", as_index=False)
+    .agg(gasto=("valor", "sum"))
+    .sort_values("gasto")
+)
+
+if not rank_dre.empty:
+    fig_rank_dre = px.bar(
+        rank_dre,
+        x="categoria",
+        y="gasto",
+        text=rank_dre["gasto"].apply(fmt_mi),
+        color="gasto",
+        color_continuous_scale="RdYlGn"
+    )
+
+    fig_rank_dre.update_layout(
+        xaxis_title="DRE",
+        yaxis_title="Gasto Realizado (R$)",
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_rank_dre, use_container_width=True)
+
