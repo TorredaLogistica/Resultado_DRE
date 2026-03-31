@@ -89,7 +89,7 @@ def load():
     df = pd.read_excel(caminho, header=None)
     df.columns = ["cidade","empresa","categoria","tipo_conta","tipo","data","valor"]
     df["tipo"] = df["tipo"].str.upper().str.strip()
-    df["tipo_conta"] = df["tipo_conta"].str.strip()
+    df["tipo_conta"] = df["tipo_conta"].str.upper().str.strip()
     df["empresa"] = df["empresa"].str.strip()
     df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
     df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
@@ -115,24 +115,29 @@ if "empresa_rank" not in st.session_state:
 anos = sorted(df.ano.unique())
 ano_padrao = max(anos)
 
+
 tipos = sorted(df.tipo_conta.dropna().unique())
 
 with st.sidebar:
     visao = st.radio("Visão", ["Consolidado","Filial","Comparativo"])
 
-    # 🔹 Filtro de ano NÃO aparece no Comparativo
     if visao != "Comparativo":
         ano = st.selectbox("Ano", anos, index=anos.index(ano_padrao))
     else:
         ano = None
 
+    # ✅ Tipo da Conta com CENTRALIZADAS padrão
     tipo_conta = st.multiselect(
         "Tipo da Conta",
         tipos,
-        default=["Centralizadas"] if "Centralizadas" in tipos else []
+        default=["CENTRALIZADAS"] if "CENTRALIZADAS" in tipos else []
     )
 
+    # ✅ Empresa
     empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
+
+    # ✅ DRE (coluna C = categoria) – logo abaixo de Empresa
+    dre = st.multiselect("DRE", dres)
 
     filial = None
     if visao == "Filial":
@@ -141,13 +146,21 @@ with st.sidebar:
 # ======================================================
 # BASE
 # ======================================================
-base = df.copy()
+
+ase = df.copy()
+
 if ano:
     base = base[base.ano == ano]
+
 if tipo_conta:
     base = base[base.tipo_conta.isin(tipo_conta)]
+
 if empresa:
     base = base[base.empresa.isin(empresa)]
+
+if dre:
+    base = base[base.categoria.isin(dre)]
+
 if filial:
     base = base[base.cidade == filial]
 
