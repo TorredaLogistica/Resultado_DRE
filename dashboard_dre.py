@@ -145,26 +145,26 @@ with st.sidebar:
     if visao == "Filial":
         filial = st.selectbox("Filial", sorted(df.cidade.unique()))
 
+
 # ======================================================
 # BASE
 # ======================================================
+base = df.copy()
 
-ase = df.copy()
-
-if ano:
-    base = base[base.ano == ano]
+if ano is not None:
+    base = base[base["ano"] == ano]
 
 if tipo_conta:
-    base = base[base.tipo_conta.isin(tipo_conta)]
+    base = base[base["tipo_conta"].isin(tipo_conta)]
 
 if empresa:
-    base = base[base.empresa.isin(empresa)]
+    base = base[base["empresa"].isin(empresa)]
 
 if dre:
-    base = base[base.categoria.isin(dre)]
+    base = base[base["categoria"].isin(dre)]
 
 if filial:
-    base = base[base.cidade == filial]
+    base = base[base["cidade"] == filial]
 
 # ======================================================
 # COMPARATIVO (PRINT 3)
