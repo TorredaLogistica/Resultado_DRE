@@ -144,7 +144,7 @@ dres = sorted(df["categoria"].dropna().unique())
 # ======================================================
 anos = sorted(df["ano"].unique())
 ano_padrao = max(anos)
-tipos = sorted(df["tipo_conta"].unique())
+tipos = sorted(df["tipo_conta"].dropna().unique())
 
 with st.sidebar:
     visao = st.radio("Visão", ["Consolidado", "Filial", "Comparativo"])
