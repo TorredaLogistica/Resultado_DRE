@@ -316,18 +316,16 @@ else:
 
 
 
-
 # ======================================================
 # GRÁFICOS DE PIZZA (%)
 # ======================================================
 base_pizza = base_real.copy()
 
-# -----------------------------
-# LINHA 1 – CD e EMPRESA
-# -----------------------------
 col_pie1, col_pie2 = st.columns(2)
 
+# -----------------------------
 # % POR CD
+# -----------------------------
 with col_pie1:
     st.subheader("Participação % por CD – Realizado")
 
@@ -344,13 +342,17 @@ with col_pie1:
             values="valor",
             hole=0.4
         )
+
         fig_pie_cd.update_traces(
             textinfo="percent+label",
             textposition="inside"
         )
+
         st.plotly_chart(fig_pie_cd, use_container_width=True)
 
+# -----------------------------
 # % POR EMPRESA
+# -----------------------------
 with col_pie2:
     st.subheader("Participação % por Empresa – Realizado")
 
@@ -367,62 +369,10 @@ with col_pie2:
             values="valor",
             hole=0.4
         )
+
         fig_pie_empresa.update_traces(
             textinfo="percent+label",
             textposition="inside"
         )
+
         st.plotly_chart(fig_pie_empresa, use_container_width=True)
-
-# -----------------------------
-# LINHA 2 – DRE (FULL WIDTH)
-# -----------------------------
-st.subheader("Participação % por DRE – Realizado")
-
-pizza_dre = (
-    base_pizza
-    .groupby("categoria", as_index=False)
-    .agg(valor=("valor", "sum"))
-)
-
-if not pizza_dre.empty:
-    fig_pie_dre = px.pie(
-        pizza_dre,
-        names="categoria",
-        values="valor",
-        hole=0.4
-    )
-    fig_pie_dre.update_traces(
-        textinfo="percent+label",
-        textposition="inside"
-    )
-    st.plotly_chart(fig_pie_dre, use_container_width=True)
-
-# ======================================================
-# RANKING DE GASTOS POR DRE – REALIZADO
-# ======================================================
-st.subheader("Ranking de Gastos por DRE – Realizado (Menor → Maior)")
-
-rank_dre = (
-    base_real
-    .groupby("categoria", as_index=False)
-    .agg(gasto=("valor", "sum"))
-    .sort_values("gasto")
-)
-
-if not rank_dre.empty:
-    fig_rank_dre = px.bar(
-        rank_dre,
-        x="categoria",
-        y="gasto",
-        text=rank_dre["gasto"].apply(fmt_mi),
-        color="gasto",
-        color_continuous_scale="RdYlGn"
-    )
-
-    fig_rank_dre.update_layout(
-        xaxis_title="DRE",
-        yaxis_title="Gasto Realizado (R$)",
-        showlegend=False
-    )
-
-    st.plotly_chart(fig_rank_dre, use_container_width=True)
