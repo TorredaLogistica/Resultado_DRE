@@ -89,7 +89,7 @@ def load():
     df = pd.read_excel(caminho, header=None)
     df.columns = ["cidade","empresa","categoria","tipo_conta","tipo","data","valor"]
     df["tipo"] = df["tipo"].str.upper().str.strip()
-    df["tipo_conta"] = df["tipo_conta"].str.upper().str.strip()
+    df["tipo_conta"] = df["tipo_conta"].str.strip()
     df["empresa"] = df["empresa"].str.strip()
     df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
     df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
@@ -101,8 +101,6 @@ def load():
 
 df = load()
 
-# ✅ Lista de DREs (coluna C = categoria)
-dres = sorted(df["categoria"].dropna().unique())
 
 # ========================================
 # ESTADO DO DRILL-DOWN (RANKING EMPRESA)
@@ -117,54 +115,41 @@ if "empresa_rank" not in st.session_state:
 anos = sorted(df.ano.unique())
 ano_padrao = max(anos)
 
-
 tipos = sorted(df.tipo_conta.dropna().unique())
 
 with st.sidebar:
-    visao = st.radio("Visão", ["Consolidado", "Filial", "Comparativo"])
+    visao = st.radio("Visão", ["Consolidado","Filial","Comparativo"])
 
+    # 🔹 Filtro de ano NÃO aparece no Comparativo
     if visao != "Comparativo":
         ano = st.selectbox("Ano", anos, index=anos.index(ano_padrao))
     else:
         ano = None
 
-    # Tipo da Conta com CENTRALIZADAS selecionado por padrão
     tipo_conta = st.multiselect(
         "Tipo da Conta",
         tipos,
-        default=["CENTRALIZADAS"] if "CENTRALIZADAS" in tipos else []
+        default=["Centralizadas"] if "Centralizadas" in tipos else []
     )
 
-    # Empresa
     empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
-
-    # ✅ DRE (coluna C)
-    dre = st.multiselect("DRE", dres)
 
     filial = None
     if visao == "Filial":
         filial = st.selectbox("Filial", sorted(df.cidade.unique()))
 
-
 # ======================================================
 # BASE
 # ======================================================
 base = df.copy()
-
-if ano is not None:
-    base = base[base["ano"] == ano]
-
+if ano:
+    base = base[base.ano == ano]
 if tipo_conta:
-    base = base[base["tipo_conta"].isin(tipo_conta)]
-
+    base = base[base.tipo_conta.isin(tipo_conta)]
 if empresa:
-    base = base[base["empresa"].isin(empresa)]
-
-if dre:
-    base = base[base["categoria"].isin(dre)]
-
+    base = base[base.empresa.isin(empresa)]
 if filial:
-    base = base[base["cidade"] == filial]
+    base = base[base.cidade == filial]
 
 # ======================================================
 # COMPARATIVO (PRINT 3)
