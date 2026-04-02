@@ -48,7 +48,6 @@ def check_password():
         st.error("Senha incorreta")
         st.stop()
 
-
 check_password()
 
 # ======================================================
@@ -71,12 +70,10 @@ def fmt_mi(v):
         .replace("X", ".")
     )
 
-
 def fmt_pct(v):
     if pd.isna(v):
         return ""
     return f"{v:.2f}%".replace(".", ",")
-
 
 # ======================================================
 # DADOS
@@ -99,7 +96,6 @@ MAPA_MESES = {
 }
 
 ORDEM_MESES = list(MAPA_MESES.values())
-
 
 @st.cache_data
 def load_data():
@@ -135,16 +131,15 @@ def load_data():
 
     return df
 
-
 df = load_data()
 dres = sorted(df["categoria"].dropna().unique())
 
 # ======================================================
 # SIDEBAR
 # ======================================================
-anos = sorted(df["ano"].unique())
+anos = sorted(df["ano"].dropna().unique())
 ano_padrao = max(anos)
-tipos = sorted(df["tipo_conta"].dropna().astype(str).unique())
+tipos = sorted(df["tipo_conta"].dropna().unique())
 
 with st.sidebar:
     visao = st.radio("Visão", ["Consolidado", "Filial", "Comparativo"])
@@ -160,12 +155,12 @@ with st.sidebar:
         default=["CENTRALIZADAS"] if "CENTRALIZADAS" in tipos else [],
     )
 
-    empresa = st.multiselect("Empresa", sorted(df["empresa"].unique()))
+    empresa = st.multiselect("Empresa", sorted(df["empresa"].dropna().unique()))
     dre = st.multiselect("DRE", dres)
 
     filial = None
     if visao == "Filial":
-        filial = st.selectbox("Filial", sorted(df["cidade"].unique()))
+        filial = st.selectbox("Filial", sorted(df["cidade"].dropna().unique()))
 
 # ======================================================
 # BASE FILTRADA
@@ -191,6 +186,7 @@ if filial:
 # VISÃO COMPARATIVO
 # ======================================================
 if visao == "Comparativo":
+
     anos_comp = st.multiselect(
         "Anos para comparação",
         anos,
@@ -261,11 +257,7 @@ else:
     if isinstance(tabela, pd.Series):
         tabela = tabela.to_frame()
 
-   
-if isinstance(tabela, pd.Series):
-    tabela = tabela.to_frame()
-
-st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
+    st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
 
     # ==================================================
     # GRÁFICO DE COLUNAS INTELIGENTE
@@ -273,7 +265,7 @@ st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
     base_real = base[base["tipo"] == "REALIZADO"]
 
     if not empresa:
-        st.subheader("Ranking de Gastos por Empresa – Realizado (Menor → Maior)")
+        st.subheader("Ranking de Gastos por Empresa – Realizado")
 
         rank = (
             base_real.groupby("empresa", as_index=False)
@@ -290,7 +282,6 @@ st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
             color_continuous_scale="RdYlGn",
         )
         st.plotly_chart(fig_rank, use_container_width=True)
-
     else:
         emp = empresa[0]
         st.subheader(f"Gastos Mensais – {emp} (Realizado)")
@@ -323,9 +314,7 @@ st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
             base_real.groupby("cidade", as_index=False)
             .agg(valor=("valor", "sum"))
         )
-        fig_cd = px.pie(
-            pizza_cd, names="cidade", values="valor", hole=0.4
-        )
+        fig_cd = px.pie(pizza_cd, names="cidade", values="valor", hole=0.4)
         fig_cd.update_traces(textinfo="percent+label")
         st.plotly_chart(fig_cd, use_container_width=True)
 
@@ -335,8 +324,6 @@ st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
             base_real.groupby("empresa", as_index=False)
             .agg(valor=("valor", "sum"))
         )
-        fig_emp_pie = px.pie(
-            pizza_emp, names="empresa", values="valor", hole=0.4
-        )
+        fig_emp_pie = px.pie(pizza_emp, names="empresa", values="valor", hole=0.4)
         fig_emp_pie.update_traces(textinfo="percent+label")
         st.plotly_chart(fig_emp_pie, use_container_width=True)
