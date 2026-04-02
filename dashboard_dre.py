@@ -261,7 +261,11 @@ else:
     if isinstance(tabela, pd.Series):
         tabela = tabela.to_frame()
 
-    st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
+   
+if isinstance(tabela, pd.Series):
+    tabela = tabela.to_frame()
+
+st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
 
     # ==================================================
     # GRÁFICO DE COLUNAS INTELIGENTE
