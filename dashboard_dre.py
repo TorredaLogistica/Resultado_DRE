@@ -240,11 +240,7 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
     tabela = mensal.pivot(index="tipo", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
-    
-st.dataframe(
-    tabela.style.format(fmt_mi),
-    use_container_width=True
-)
+    st.dataframe(tabela.applymap(fmt_mi), use_container_width=True)
 
 # ======================================================
 # GASTOS REALIZADOS
