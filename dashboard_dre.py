@@ -70,7 +70,7 @@ def fmt_pct(v):
 # ======================================================
 # DADOS
 # ======================================================
-ARQUIVO = "Resultado DRE.xlsx"
+ARQUIVO = "Resultado DRE_Anterior.xlsx"
 
 MAPA_MESES = {
     1:"janeiro",2:"fevereiro",3:"março",4:"abril",
