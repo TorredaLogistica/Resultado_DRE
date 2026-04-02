@@ -426,4 +426,3 @@ if not rank_dre.empty:
     )
 
     st.plotly_chart(fig_rank_dre, use_container_width=True)
-
