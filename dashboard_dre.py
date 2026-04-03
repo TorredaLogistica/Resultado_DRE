@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # =============================
-# LOGIN (Mantido conforme original)
+# LOGIN
 # =============================
 def check_password():
     def password_entered():
@@ -83,7 +83,7 @@ ORDEM_MESES = list(MAPA_MESES.values())
 def load():
     caminho = os.path.join(os.path.dirname(__file__), ARQUIVO)
     if not os.path.exists(caminho):
-        st.error("Arquivo Resultado DRE.xlsx não encontrado no repositório.")
+        st.error(f"Arquivo {ARQUIVO} não encontrado no repositório.")
         st.stop()
 
     df = pd.read_excel(caminho, header=None)
@@ -100,24 +100,13 @@ def load():
     return df
 
 df = load()
-
-# ✅ Lista de DREs (coluna C = categoria)
 dres = sorted(df["categoria"].dropna().unique())
-
-# ========================================
-# ESTADO DO DRILL-DOWN (RANKING EMPRESA)
-# ========================================
-if "empresa_rank" not in st.session_state:
-    st.session_state.empresa_rank = None
-
 
 # ======================================================
 # SIDEBAR
 # ======================================================
 anos = sorted(df.ano.unique())
 ano_padrao = max(anos)
-
-
 tipos = sorted(df.tipo_conta.dropna().unique())
 
 with st.sidebar:
@@ -128,49 +117,39 @@ with st.sidebar:
     else:
         ano = None
 
-    # Tipo da Conta com CENTRALIZADAS selecionado por padrão
     tipo_conta = st.multiselect(
         "Tipo da Conta",
         tipos,
         default=["CENTRALIZADAS"] if "CENTRALIZADAS" in tipos else []
     )
 
-    # Empresa
     empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
-
-    # ✅ DRE (coluna C)
     dre = st.multiselect("DRE", dres)
 
     filial = None
     if visao == "Filial":
         filial = st.selectbox("Filial", sorted(df.cidade.unique()))
 
-
 # ======================================================
-# BASE
+# FILTROS DE BASE
 # ======================================================
 base = df.copy()
 
 if ano is not None:
     base = base[base["ano"] == ano]
-
 if tipo_conta:
     base = base[base["tipo_conta"].isin(tipo_conta)]
-
 if empresa:
     base = base[base["empresa"].isin(empresa)]
-
 if dre:
     base = base[base["categoria"].isin(dre)]
-
 if filial:
     base = base[base["cidade"] == filial]
 
 # ======================================================
-# COMPARATIVO (PRINT 3)
+# LÓGICA DE VISÃO
 # ======================================================
 if visao == "Comparativo":
-
     anos_comp = st.multiselect("Anos para comparação", anos, default=anos[-2:])
 
     comp = (
@@ -195,18 +174,15 @@ if visao == "Comparativo":
         if a1 in tabela.index and a2 in tabela.index:
             tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
 
-    # ✅ CORREÇÃO AQUI: Converter para object para permitir strings de formatação
+    # ✅ CORREÇÃO: Converter para object ANTES de aplicar formatação de string
     tabela_fmt = tabela.astype(object).copy()
     for idx in tabela_fmt.index:
         tabela_fmt.loc[idx] = tabela_fmt.loc[idx].apply(fmt_pct if idx == "Variação %" else fmt_mi)
 
     st.dataframe(tabela_fmt, use_container_width=True)
 
-# ======================================================
-# CONSOLIDADO / FILIAL (PRINT 1 e 2)
-# ======================================================
 else:
-
+    # Visão Consolidado / Filial
     mensal = base.groupby(["mes_num","mes_nome","tipo"])["valor"].sum().reset_index()
 
     mes_real = mensal[mensal.tipo=="REALIZADO"]["mes_num"].max() or 0
@@ -241,143 +217,42 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
     tabela = mensal.pivot(index="tipo", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
-    
-    st.dataframe(
-        tabela.style.format(fmt_mi),
-        use_container_width=True
-    )
+    st.dataframe(tabela.style.format(fmt_mi), use_container_width=True)
 
 # ======================================================
-# GASTOS REALIZADOS
+# SEÇÃO FINAL: GASTOS REALIZADOS (RANKING E PIZZA)
 # ======================================================
 base_real = base[base.tipo == "REALIZADO"]
 
-# ------------------------------------------------------
-# CASO 1 – NENHUMA EMPRESA SELECIONADA → RANKING
-# ------------------------------------------------------
 if not empresa:
-
     st.subheader("Ranking de Gastos por Empresa – Realizado (Menor → Maior)")
-
-    rank_empresa = (
-        base_real
-        .groupby("empresa", as_index=False)
-        .agg(gasto=("valor", "sum"))
-        .sort_values("gasto")
-    )
-
+    rank_empresa = base_real.groupby("empresa", as_index=False).agg(gasto=("valor", "sum")).sort_values("gasto")
     fig_rank_empresa = px.bar(
-        rank_empresa,
-        x="empresa",
-        y="gasto",
+        rank_empresa, x="empresa", y="gasto",
         text=rank_empresa["gasto"].apply(fmt_mi),
-        color="gasto",
-        color_continuous_scale="RdYlGn"
+        color="gasto", color_continuous_scale="RdYlGn"
     )
-
-    fig_rank_empresa.update_layout(
-        xaxis_title="Empresa",
-        yaxis_title="Gasto Realizado (R$)",
-        showlegend=False
-    )
-
     st.plotly_chart(fig_rank_empresa, use_container_width=True)
-
-# ------------------------------------------------------
-# CASO 2 – EMPRESA SELECIONADA → MESES REALIZADOS
-# ------------------------------------------------------
 else:
     emp = empresa[0]
-
     st.subheader(f"Gastos Mensais – {emp} (Realizado)")
-
-    mensal_emp = (
-        base_real
-        .groupby(["empresa", "mes_num", "mes_nome"], as_index=False)
-        .agg(valor=("valor", "sum"))
-    )
-
-    mensal_emp = (
-        mensal_emp[mensal_emp["empresa"] == emp]
-        .sort_values("mes_num")
-    )
-
+    mensal_emp = base_real[base_real["empresa"] == emp].groupby(["mes_num", "mes_nome"], as_index=False).agg(valor=("valor", "sum")).sort_values("mes_num")
     fig_mensal = px.bar(
-        mensal_emp,
-        x="mes_nome",
-        y="valor",
+        mensal_emp, x="mes_nome", y="valor",
         text=mensal_emp["valor"].apply(fmt_mi),
-        color="valor",
-        color_continuous_scale="Blues"
+        color="valor", color_continuous_scale="Blues"
     )
-
-    fig_mensal.update_layout(
-        xaxis_title="Mês",
-        yaxis_title="Gasto Realizado (R$)",
-        showlegend=False
-    )
-
     st.plotly_chart(fig_mensal, use_container_width=True)
 
-
-
-# ======================================================
-# GRÁFICOS DE PIZZA (%)
-# ======================================================
-base_pizza = base_real.copy()
-
 col_pie1, col_pie2 = st.columns(2)
-
-# -----------------------------
-# % POR CD
-# -----------------------------
 with col_pie1:
-    st.subheader("Participação % por CD – Realizado")
-
-    pizza_cd = (
-        base_pizza
-        .groupby("cidade", as_index=False)
-        .agg(valor=("valor", "sum"))
-    )
-
+    st.subheader("Participação % por CD")
+    pizza_cd = base_real.groupby("cidade", as_index=False).agg(valor=("valor", "sum"))
     if not pizza_cd.empty:
-        fig_pie_cd = px.pie(
-            pizza_cd,
-            names="cidade",
-            values="valor",
-            hole=0.4
-        )
+        st.plotly_chart(px.pie(pizza_cd, names="cidade", values="valor", hole=0.4), use_container_width=True)
 
-        fig_pie_cd.update_traces(
-            textinfo="percent+label",
-            textposition="inside"
-        )
-
-        st.plotly_chart(fig_pie_cd, use_container_width=True)
-
-# -----------------------------
-# % POR EMPRESA
-# -----------------------------
 with col_pie2:
-    st.subheader("Participação % por Empresa – Realizado")
-
-    pizza_empresa = (
-        base_pizza
-        .groupby("empresa", as_index=False)
-        .agg(valor=("valor", "sum"))
-    )
-
-    if not pizza_empresa.empty:
-        fig_pie_empresa = px.pie(
-            pizza_empresa,
-            names="empresa",
-            values="valor",
-            hole=0.4
-        )
-
-        fig_pie_empresa.update_traces(
-            textinfo="percent+label",
-            textposition="inside"
-        )
-
-        st.plotly_chart(fig_pie_empresa, use_container_width=True)
+    st.subheader("Participação % por Empresa")
+    pizza_emp = base_real.groupby("empresa", as_index=False).agg(valor=("valor", "sum"))
+    if not pizza_emp.empty:
+        st.plotly_chart(px.pie(pizza_emp, names="empresa", values="valor", hole=0.4), use_container_width=True)
