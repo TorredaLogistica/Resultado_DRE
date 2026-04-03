@@ -195,7 +195,8 @@ if visao == "Comparativo":
         if a1 in tabela.index and a2 in tabela.index:
             tabela.loc["Variação %"] = (tabela.loc[a2] / tabela.loc[a1] - 1) * 100
 
-    tabela_fmt = tabela.copy()
+    # ✅ CORREÇÃO AQUI: Converter para object para permitir strings de formatação
+    tabela_fmt = tabela.astype(object).copy()
     for idx in tabela_fmt.index:
         tabela_fmt.loc[idx] = tabela_fmt.loc[idx].apply(fmt_pct if idx == "Variação %" else fmt_mi)
 
@@ -241,10 +242,10 @@ else:
 
     tabela = mensal.pivot(index="tipo", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
     
-st.dataframe(
-    tabela.style.format(fmt_mi),
-    use_container_width=True
-)
+    st.dataframe(
+        tabela.style.format(fmt_mi),
+        use_container_width=True
+    )
 
 # ======================================================
 # GASTOS REALIZADOS
