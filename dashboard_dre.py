@@ -42,12 +42,13 @@ def check_password():
     if not st.session_state.get("password_correct", False):
         st.title("🔒 Acesso Restrito")
         st.text_input(
-            "Digite a senha",
-            type="password",
-            on_change=password_entered,
-            key="password",
-        )
-
+    "Digite a senha",
+    type="password",
+    on_change=password_entered,
+    key="password",
+    autocomplete="new-password"
+)
+        
         # Mostra erro somente depois que o usuário tentar
         if st.session_state.get("password", "") != "" and not st.session_state.get("password_correct", False):
             st.error("Senha incorreta")
