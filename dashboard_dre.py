@@ -46,7 +46,7 @@ def check_password():
     type="password",
     on_change=password_entered,
     key="password",
-    autocomplete="new-password"
+    autocomplete="off"
 )
         
         # Mostra erro somente depois que o usuário tentar
