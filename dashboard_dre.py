@@ -160,6 +160,85 @@ if visao == "Comparativo":
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # Oscilação mensal do Realizado entre os dois anos selecionados.
+    # Exemplo: ((Realizado 2026 / Realizado 2025) - 1) * 100.
+    if len(anos_comp) == 2:
+        ano_anterior, ano_atual = sorted(anos_comp)
+        comparacao_mensal = (
+            comp.pivot_table(
+                index=["mes_num", "mes_nome"],
+                columns="ano",
+                values="valor",
+                aggfunc="sum"
+            )
+            .reset_index()
+        )
+
+        if ano_anterior in comparacao_mensal.columns and ano_atual in comparacao_mensal.columns:
+            comparacao_mensal = comparacao_mensal[
+                comparacao_mensal[ano_anterior].notna()
+                & comparacao_mensal[ano_atual].notna()
+                & comparacao_mensal[ano_anterior].ne(0)
+            ].copy()
+            comparacao_mensal["variacao_pct"] = (
+                comparacao_mensal[ano_atual] / comparacao_mensal[ano_anterior] - 1
+            ) * 100
+            comparacao_mensal["mes_ano"] = (
+                comparacao_mensal["mes_num"].astype(int).astype(str).str.zfill(2)
+                + "/"
+                + str(ano_atual)
+            )
+            comparacao_mensal["cor"] = comparacao_mensal["variacao_pct"].apply(
+                lambda valor: "Positiva" if valor >= 0 else "Negativa"
+            )
+            comparacao_mensal["rotulo"] = comparacao_mensal["variacao_pct"].apply(
+                lambda valor: f"{valor:+.1f}%".replace(".", ",")
+            )
+            comparacao_mensal = comparacao_mensal.sort_values("mes_num")
+
+            if not comparacao_mensal.empty:
+                st.subheader(f"Oscilação mensal: Realizado {ano_atual} x {ano_anterior}")
+                fig_comp_oscilacao = px.bar(
+                    comparacao_mensal,
+                    x="mes_ano",
+                    y="variacao_pct",
+                    color="cor",
+                    text="rotulo",
+                    color_discrete_map={"Positiva": "#2AA79B", "Negativa": "#E30613"},
+                    category_orders={
+                        "mes_ano": comparacao_mensal["mes_ano"].tolist()
+                    }
+                )
+                fig_comp_oscilacao.update_traces(
+                    textposition="outside",
+                    cliponaxis=False,
+                    hovertemplate=(
+                        "Mês: %{x}<br>Variação: %{y:+.2f}%<extra></extra>"
+                    )
+                )
+                fig_comp_oscilacao.update_layout(
+                    title=f"Variação mensal do custo: {ano_atual} x {ano_anterior}",
+                    xaxis_title=None,
+                    yaxis_title="Variação (%)",
+                    showlegend=False,
+                    bargap=0.25
+                )
+                fig_comp_oscilacao.update_yaxes(
+                    ticksuffix="%",
+                    zeroline=True,
+                    zerolinecolor="#94A3B8",
+                    gridcolor="#E2E8F0"
+                )
+                st.plotly_chart(fig_comp_oscilacao, use_container_width=True)
+            else:
+                st.info(
+                    f"Não há meses com valores realizados válidos em {ano_anterior} e {ano_atual} para calcular a oscilação."
+                )
+        else:
+            st.info("Os dois anos selecionados não possuem dados realizados para comparação.")
+    elif len(anos_comp) > 0:
+        st.info("Selecione exatamente dois anos para exibir o gráfico de oscilação mensal.")
+
     tabela = comp.pivot(index="ano", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
 
     if len(anos_comp) == 2:
