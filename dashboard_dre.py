@@ -68,7 +68,13 @@ def load():
     df.columns = ["cidade","empresa","categoria","tipo_conta","tipo","data","valor"]
     df["tipo"] = df["tipo"].str.upper().str.strip()
     df["tipo_conta"] = df["tipo_conta"].str.upper().str.strip()
-    df["empresa"] = df["empresa"].str.strip()
+    df["empresa"] = df["empresa"].astype("string").str.strip()
+    # Chave auxiliar para reconhecer E-Commerce mesmo com espaços ou hífens diferentes.
+    df["empresa_chave"] = (
+        df["empresa"]
+        .str.upper()
+        .str.replace(r"[^A-Z0-9]", "", regex=True)
+    )
     df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
     df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
     df = df.dropna(subset=["data","valor"])
@@ -101,7 +107,16 @@ with st.sidebar:
         default=["CENTRALIZADAS"] if "CENTRALIZADAS" in tipos else []
     )
 
-    empresa = st.multiselect("Empresa", sorted(df.empresa.unique()))
+    incluir_ecommerce = st.checkbox(
+        "Incluir Empresa E-Commerce",
+        value=False,
+        help="Por padrão, a Empresa E-Commerce fica fora de todos os indicadores e gráficos."
+    )
+    empresas_disponiveis = df.loc[
+        incluir_ecommerce | (df["empresa_chave"] != "ECOMMERCE"),
+        "empresa"
+    ].dropna().sort_values().unique()
+    empresa = st.multiselect("Empresa", empresas_disponiveis)
     dre = st.multiselect("DRE", dres)
 
     filial = None
@@ -193,6 +208,82 @@ else:
         category_orders={"mes_nome": ORDEM_MESES}, markers=True
     )
     st.plotly_chart(fig, use_container_width=True)
+
+    # Oscilação mensal entre Realizado e Forecast:
+    # ((Realizado / Forecast) - 1) * 100.
+    oscilacao = (
+        mensal[mensal["tipo"].isin(["REALIZADO", "FORECAST"])]
+        .pivot_table(
+            index=["mes_num", "mes_nome"],
+            columns="tipo",
+            values="valor",
+            aggfunc="sum"
+        )
+        .reset_index()
+    )
+
+    if {"REALIZADO", "FORECAST"}.issubset(oscilacao.columns):
+        oscilacao = oscilacao[
+            oscilacao["REALIZADO"].notna()
+            & oscilacao["FORECAST"].notna()
+            & oscilacao["FORECAST"].ne(0)
+        ].copy()
+        oscilacao["variacao_pct"] = (
+            oscilacao["REALIZADO"] / oscilacao["FORECAST"] - 1
+        ) * 100
+        oscilacao["mes_ano"] = (
+            oscilacao["mes_num"].astype(int).astype(str).str.zfill(2)
+            + "/"
+            + str(ano)
+        )
+        oscilacao["cor"] = oscilacao["variacao_pct"].apply(
+            lambda valor: "Positiva" if valor >= 0 else "Negativa"
+        )
+        oscilacao["rotulo"] = oscilacao["variacao_pct"].apply(
+            lambda valor: f"{valor:+.1f}%".replace(".", ",")
+        )
+        oscilacao = oscilacao.sort_values("mes_num")
+
+        if not oscilacao.empty:
+            st.subheader("Oscilação mensal: Realizado x Forecast")
+            fig_oscilacao = px.bar(
+                oscilacao,
+                x="mes_ano",
+                y="variacao_pct",
+                color="cor",
+                text="rotulo",
+                color_discrete_map={"Positiva": "#2AA79B", "Negativa": "#E30613"},
+                category_orders={"mes_ano": oscilacao["mes_ano"].tolist()}
+            )
+            fig_oscilacao.update_traces(
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate=(
+                    "Mês: %{x}<br>Variação: %{y:+.2f}%<extra></extra>"
+                )
+            )
+            fig_oscilacao.update_layout(
+                title="Variação mensal do custo",
+                xaxis_title=None,
+                yaxis_title="Variação (%)",
+                showlegend=False,
+                bargap=0.25
+            )
+            fig_oscilacao.update_yaxes(
+                ticksuffix="%",
+                zeroline=True,
+                zerolinecolor="#94A3B8",
+                gridcolor="#E2E8F0"
+            )
+            st.plotly_chart(fig_oscilacao, use_container_width=True)
+        else:
+            st.info(
+                "Não há meses com valores de Realizado e Forecast válidos para calcular a oscilação."
+            )
+    else:
+        st.info(
+            "Não há dados simultâneos de Realizado e Forecast para calcular a oscilação mensal."
+        )
 
     tabela = mensal.pivot(index="tipo", columns="mes_nome", values="valor").reindex(columns=ORDEM_MESES)
     st.dataframe(tabela.style.format(fmt_mi), use_container_width=True)
