@@ -128,6 +128,12 @@ with st.sidebar:
 # ======================================================
 base = df.copy()
 
+# REGRA GLOBAL E-COMMERCE:
+# Por padrao, E-Commerce fica fora de TODOS os calculos, cards, tabelas e graficos.
+# So entra no indicador quando o checkbox "Incluir Empresa E-Commerce" estiver marcado.
+if not incluir_ecommerce:
+    base = base[base["empresa_chave"] != "ECOMMERCE"]
+
 if ano is not None:
     base = base[base["ano"] == ano]
 if tipo_conta:
